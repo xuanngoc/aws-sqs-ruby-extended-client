@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "#{spec.homepage}/blob/main/CHANGELOG.md"
   spec.metadata["rubygems_mfa_required"] = "true"
 
-  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE.txt", "CHANGELOG.md"]
+  spec.files = Dir["lib/**/*.rb", "README.md", "LICENSE.txt", "NOTICE", "CHANGELOG.md"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "aws-sdk-s3", "~> 1.0"

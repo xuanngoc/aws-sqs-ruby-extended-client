@@ -1,0 +1,20 @@
+sqs_extended_client
+Copyright 2026 Ngoc Bui
+
+This product is an independent Ruby implementation of the payload offloading
+protocol introduced by the Amazon SQS Extended Client Library for Java:
+
+  https://github.com/awslabs/amazon-sqs-java-extended-client-lib
+  Copyright 2010-2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  Licensed under the Apache License, Version 2.0.
+
+The wire format reproduced here -- the ExtendedPayloadSize message attribute,
+the PayloadS3Pointer message body and the receipt handle markers -- originates
+in that library and in its supporting library:
+
+  https://github.com/awslabs/payload-offloading-java-common-lib-for-aws
+  Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  Licensed under the Apache License, Version 2.0.
+
+No source code from those projects is included in this product. This project is
+not affiliated with, endorsed by, or sponsored by Amazon Web Services.

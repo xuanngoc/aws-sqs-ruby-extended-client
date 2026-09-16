@@ -164,6 +164,19 @@ Only the operations that need it are overridden: `send_message`, `send_message_b
 - `receive_message` returns a freshly built `Aws::SQS::Types::ReceiveMessageResult`, so the
   Seahorse response context (`.context`, `#successful?`) is not carried through.
 
+## Credits
+
+The design is not original to this gem. The approach, and every byte of the wire format it
+speaks, come from the [Amazon SQS Extended Client Library for Java](https://github.com/awslabs/amazon-sqs-java-extended-client-lib)
+and its supporting [payload offloading library](https://github.com/awslabs/payload-offloading-java-common-lib-for-aws),
+both Apache-2.0 licensed and copyright Amazon.com, Inc. or its affiliates. AWS also publishes
+an [official Python implementation](https://github.com/awslabs/amazon-sqs-python-extended-client-lib).
+
+This is an independent reimplementation in Ruby. No source code from those projects is
+included here, and the project is not affiliated with, endorsed by, or sponsored by Amazon
+Web Services.
+
 ## License
 
-Apache-2.0.
+Apache-2.0, matching the library this one follows. See [LICENSE.txt](LICENSE.txt) and
+[NOTICE](NOTICE).
