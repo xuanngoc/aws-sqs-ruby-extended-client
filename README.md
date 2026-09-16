@@ -19,26 +19,94 @@ Requires Ruby 3.1 or newer, and is tested on Ruby 4.
 
 ## Usage
 
-```ruby
-client = SqsExtendedClient::Client.new(bucket_name: "my-payload-bucket")
-
-client.send_message(queue_url: queue_url, message_body: huge_json)
-
-response = client.receive_message(queue_url: queue_url)
-message = response.messages.first
-message.body # the original payload, fetched back from S3
-
-client.delete_message(queue_url: queue_url, receipt_handle: message.receipt_handle)
-# deletes the S3 object too
-```
-
-Pass your own clients when you need to configure region, credentials or retries:
+Build the client once and hold onto it. Pass your own SQS and S3 clients when you need to set
+region, credentials or retries; every other keyword is an option from the table below.
 
 ```ruby
 client = SqsExtendedClient::Client.new(
   bucket_name: "my-payload-bucket",
   sqs_client: Aws::SQS::Client.new(region: "ap-southeast-1"),
   s3_client: Aws::S3::Client.new(region: "ap-southeast-1")
+)
+```
+
+### Sending
+
+Send as you would with the plain SQS client. Bodies under the threshold go straight to the
+queue; anything larger is written to S3 first and the queue gets a pointer.
+
+```ruby
+client.send_message(
+  queue_url: queue_url,
+  message_body: JSON.generate(order),  # any size
+  message_attributes: {
+    "event_type" => { data_type: "String", string_value: "order.created" }
+  }
+)
+```
+
+Batches work the same way, each entry is offloaded on its own:
+
+```ruby
+client.send_message_batch(
+  queue_url: queue_url,
+  entries: orders.each_with_index.map do |order, index|
+    { id: index.to_s, message_body: JSON.generate(order) }
+  end
+)
+```
+
+Remember that SQS sizes a batch by what actually goes on the queue. Offloaded entries are only
+a pointer each, so a batch of large payloads still fits comfortably under the 256 KB batch cap.
+
+### Polling
+
+A worker loop. `receive_message` fetches the body back from S3 before you see it, and
+`delete_message` removes the S3 object along with the message:
+
+```ruby
+loop do
+  response = client.receive_message(
+    queue_url: queue_url,
+    max_number_of_messages: 10,
+    wait_time_seconds: 20,   # long polling, keeps the loop from spinning
+    visibility_timeout: 60   # must comfortably exceed your processing time
+  )
+
+  response.messages.each do |message|
+    process(JSON.parse(message.body))
+
+    client.delete_message(queue_url: queue_url, receipt_handle: message.receipt_handle)
+  rescue StandardError => e
+    # Leave the message alone and let SQS redeliver it after the visibility timeout.
+    logger.error("failed to process #{message.message_id}: #{e.message}")
+  end
+end
+```
+
+Delete only after the work succeeded. Deleting first would drop the S3 object too, so a
+redelivery would arrive pointing at an object that is no longer there.
+
+To delete in batches, pass the receipt handles through unchanged — the pointer travels inside
+them, and each entry is cleaned up from S3 individually:
+
+```ruby
+client.delete_message_batch(
+  queue_url: queue_url,
+  entries: processed.each_with_index.map do |message, index|
+    { id: index.to_s, receipt_handle: message.receipt_handle }
+  end
+)
+```
+
+If processing runs long, extend the lease with `change_message_visibility`; it accepts the
+receipt handle you were given and strips the pointer out before the call reaches SQS:
+
+```ruby
+client.change_message_visibility(
+  queue_url: queue_url,
+  receipt_handle: message.receipt_handle,
+  visibility_timeout: 300
 )
 ```
 
