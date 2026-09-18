@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["Ngoc Bui"]
   spec.email = ["ngocbui.se@gmail.com"]
 
-  spec.summary = "Send and receive SQS messages larger than 256 KB by offloading the payload to S3."
+  spec.summary = "Send and receive SQS messages larger than 1 MiB by offloading the payload to S3."
   spec.description = "A wrapper around Aws::SQS::Client that stores large message bodies in S3 and " \
                      "sends a pointer through the queue instead, wire compatible with the AWS SQS " \
                      "extended client libraries for Java and Python."

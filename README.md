@@ -1,6 +1,6 @@
 # sqs_extended_client
 
-Send and receive Amazon SQS messages larger than the 256 KB limit by storing the body in S3
+Send and receive Amazon SQS messages larger than the 1 MiB limit by storing the body in S3
 and putting a small pointer on the queue instead. It is a wrapper around `Aws::SQS::Client`,
 so anything it does not need to touch is delegated straight through.
 
@@ -56,8 +56,11 @@ client.send_message_batch(
 )
 ```
 
-Remember that SQS sizes a batch by what actually goes on the queue. Offloaded entries are only
-a pointer each, so a batch of large payloads still fits comfortably under the 256 KB batch cap.
+Mind the batch cap: SQS limits a `SendMessageBatch` to 1 MiB **in total**, the same number as
+the per-message limit. The threshold here is per message, so ten 500 KiB bodies are each under
+it, none are offloaded, and the batch is rejected with `BatchRequestTooLong`. When you batch
+large payloads, set `payload_size_threshold` to roughly the batch cap divided by the number of
+entries so they offload to pointers first.
 
 ### Polling
 
@@ -115,7 +118,7 @@ client.change_message_visibility(
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `bucket_name` | required | S3 bucket the payloads are written to. |
-| `payload_size_threshold` | `262_144` | Offload once body + attributes exceed this many bytes. |
+| `payload_size_threshold` | `1_048_576` | Offload once body + attributes exceed this many bytes. |
 | `always_through_s3` | `false` | Offload every message regardless of size. |
 | `cleanup_s3_payload` | `true` | Delete the S3 object when the message is deleted. |
 | `ignore_payload_not_found` | `false` | On a missing S3 object, delete the SQS message and skip it instead of raising. |
@@ -154,6 +157,12 @@ Only the operations that need it are overridden: `send_message`, `send_message_b
 
 ## Caveats
 
+- The default threshold follows the current SQS limit of 1 MiB, which AWS raised from 256 KiB
+  in August 2025. The AWS Java and Python extended clients still default to 262_144, so the
+  same payload may offload there and go inline here. That is a local cost decision, not a
+  compatibility one: both sides read whatever they are given. Set
+  `payload_size_threshold: 262_144` to match them, and do the same against an SQS-compatible
+  endpoint such as LocalStack or ElasticMQ that has not adopted the larger limit.
 - SQS allows 10 message attributes and the reserved one takes a slot, so an offloaded message
   may carry at most 9 of your own.
 - Nothing here expires S3 objects on its own. Set a lifecycle rule on the bucket so payloads

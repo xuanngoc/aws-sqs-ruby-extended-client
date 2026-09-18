@@ -2,8 +2,11 @@
 
 module SqsExtendedClient
   class Configuration
-    # SQS caps a message at 256 KiB; anything larger goes to S3.
-    DEFAULT_PAYLOAD_SIZE_THRESHOLD = 262_144
+    # SQS caps a message at 1 MiB (raised from 256 KiB in August 2025); anything
+    # larger goes to S3. Set payload_size_threshold to 262_144 to match the AWS
+    # Java and Python extended clients, which still default to the old limit, or
+    # when the endpoint is not the real SQS.
+    DEFAULT_PAYLOAD_SIZE_THRESHOLD = 1_048_576
 
     # SQS allows 10 message attributes and the reserved one takes a slot.
     MAX_ALLOWED_ATTRIBUTES = 9
